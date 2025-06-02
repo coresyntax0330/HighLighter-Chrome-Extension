@@ -1,44 +1,63 @@
 let currentWords = [];
 let userEmail = null;
 let intervalId = null;
+let isHighlighting = false; // Flag to prevent overlapping highlights
 
-const API_URL = "http://85.208.108.238:5000/api/bids/get-companies"; // Example: expects ?email=xyz
+// 1. Cleanup all intervals and observers
+function cleanup() {
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+  currentWords = [];
+}
 
-// 1. Create email input UI
+// 2. Email Input UI
 function createEmailInput() {
   const wrapper = document.createElement("div");
-  wrapper.style.position = "fixed";
-  wrapper.style.top = "20px";
-  wrapper.style.right = "20px";
-  wrapper.style.background = "#fff";
-  wrapper.style.border = "1px solid #ccc";
-  wrapper.style.padding = "10px";
-  wrapper.style.zIndex = "99999";
-  wrapper.style.boxShadow = "0 0 10px rgba(0,0,0,0.1)";
-  wrapper.style.borderRadius = "8px";
+  wrapper.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 1px solid #ddd;
+    padding: 15px;
+    z-index: 99999;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  `;
 
   const input = document.createElement("input");
   input.type = "email";
-  input.placeholder = "Enter your email";
-  input.style.marginRight = "8px";
-  input.style.padding = "4px";
-  input.style.color = "#000";
+  input.placeholder = "your@email.com";
+  input.style.cssText = `
+    padding: 8px;
+    width: 200px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  `;
 
   const button = document.createElement("button");
   button.textContent = "Start";
-  button.style.padding = "4px 8px";
-  button.style.background = "blue";
-  button.style.color = "#fff";
+  button.style.cssText = `
+    padding: 8px 16px;
+    background: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  `;
 
   button.onclick = () => {
     const email = input.value.trim();
-    if (email) {
+    if (email.includes("@")) {
       userEmail = email;
-      wrapper.remove();
       localStorage.setItem("highlight_user_email", email);
+      wrapper.remove();
       startFetchingWords();
     } else {
-      alert("Please enter a valid email.");
+      alert("Please enter a valid email");
     }
   };
 
@@ -47,73 +66,124 @@ function createEmailInput() {
   document.body.appendChild(wrapper);
 }
 
-// 2. Start polling the backend every 10 seconds
+// 3. Controlled fetching with single interval
 function startFetchingWords() {
-  fetchAndHighlight(); // Run immediately
-  intervalId = setInterval(fetchAndHighlight, 10000); // Every 10s
+  cleanup(); // Clear any existing intervals
+
+  // Initial fetch
+  fetchAndHighlight();
+
+  // Set up refresh (every 20 seconds)
+  intervalId = setInterval(fetchAndHighlight, 20000);
 }
 
-// 3. Fetch from backend and highlight
-function fetchAndHighlight() {
-  chrome.runtime.sendMessage(
-    {
+// 4. Safe fetching and highlighting
+async function fetchAndHighlight() {
+  if (!userEmail || isHighlighting) return;
+
+  isHighlighting = true;
+
+  try {
+    const response = await chrome.runtime.sendMessage({
       action: "fetchData",
       url: `http://85.208.108.238:5000/api/bids/get-companies?email=${encodeURIComponent(
         userEmail
       )}`,
-    },
-    (response) => {
-      if (response.data) {
-        currentWords = response.data;
-        // clearHighlights();
-        highlightWords(currentWords);
-      } else {
-        console.error("Error:", response.error);
+    });
+
+    if (response?.data) {
+      console.log(response.data, "--respons data--");
+
+      const newWords = processWords(response.data);
+      if (!arraysEqual(newWords, currentWords)) {
+        currentWords = newWords;
+        await performHighlighting();
       }
     }
-  );
+  } catch (error) {
+    console.error("Highlight error:", error);
+  } finally {
+    isHighlighting = false;
+  }
 }
 
-// 4. Clear previous highlights
-function clearHighlights() {
-  document.querySelectorAll("mark.highlighted-extention").forEach((el) => {
-    const parent = el.parentNode;
-    parent.replaceChild(document.createTextNode(el.textContent), el);
-    parent.normalize();
+// 5. Safe word processing
+function processWords(data) {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .filter((item) => typeof item === "string")
+    .map((item) =>
+      item.replace(/_/g, " ").replace(/\.$/, "").trim().toLowerCase()
+    )
+    .filter((item, index, self) => item && self.indexOf(item) === index);
+}
+
+// 6. Highlighting with DOM safety
+async function performHighlighting() {
+  // Remove old highlights
+  document.querySelectorAll("mark.highlight-extension").forEach((el) => {
+    el.replaceWith(el.textContent);
   });
-}
 
-// 5. Highlight function
-function highlightWords(words) {
-  const regex = new RegExp(`\\b(${words.join("|")})\\b`, "gi");
+  if (!currentWords.length) return;
 
-  function walk(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const matches = node.nodeValue.match(regex);
-      if (matches) {
-        const span = document.createElement("span");
-        span.innerHTML = node.nodeValue.replace(regex, (match) => {
-          return `<mark class="highlighted-extention">${match}</mark>`;
-        });
-        node.replaceWith(span);
-      }
-    } else if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      node.childNodes &&
-      !["SCRIPT", "STYLE", "NOSCRIPT", "IFRAME"].includes(node.tagName)
-    ) {
-      Array.from(node.childNodes).forEach(walk);
+  const regex = new RegExp(
+    `\\b(${currentWords.map(escapeRegExp).join("|")})\\b`,
+    "gi"
+  );
+  const treeWalker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const parent = node.parentNode;
+        if (parent.nodeName === "SCRIPT" || parent.nodeName === "STYLE")
+          return NodeFilter.FILTER_REJECT;
+        if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    }
+  );
+
+  const nodes = [];
+  while (treeWalker.nextNode()) {
+    if (regex.test(treeWalker.currentNode.nodeValue)) {
+      nodes.push(treeWalker.currentNode);
     }
   }
 
-  walk(document.body);
+  // Process in chunks to avoid freezing
+  for (let i = 0; i < nodes.length; i++) {
+    if (i % 100 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+    const node = nodes[i];
+    const span = document.createElement("span");
+    span.innerHTML = node.nodeValue.replace(
+      regex,
+      '<mark class="highlight-extension">$&</mark>'
+    );
+    node.replaceWith(span);
+  }
 }
 
-// Load email from localStorage (if available)
-userEmail = localStorage.getItem("highlight_user_email");
+// Helpers
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
+function arraysEqual(a, b) {
+  return a.length === b.length && a.every((val, index) => val === b[index]);
+}
+
+// Initialization
+
+userEmail = localStorage.getItem("highlight_user_email");
 if (userEmail) {
   startFetchingWords();
 } else {
   createEmailInput();
 }
+
+// Cleanup when page unloads
+window.addEventListener("unload", cleanup);
