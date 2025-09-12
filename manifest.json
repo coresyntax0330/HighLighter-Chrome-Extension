@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Automatically highlights certain words on a page",
   "permissions": ["scripting", "storage"],
-  "host_permissions": ["<all_urls>", "http://85.208.108.238:5000/*"],
+  "host_permissions": ["<all_urls>", "http://45.15.160.247:5000/*"],
   "background": {
     "service_worker": "background.js"
   },
