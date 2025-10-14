@@ -92,8 +92,6 @@ async function fetchAndHighlight() {
     });
 
     if (response?.data) {
-      console.log(response.data, "--respons data--");
-
       const newWords = processWords(response.data);
       if (!arraysEqual(newWords, currentWords)) {
         currentWords = newWords;
