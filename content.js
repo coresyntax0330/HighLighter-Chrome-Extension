@@ -199,7 +199,7 @@ function arraysEqual(a, b) {
 
 userEmail = localStorage.getItem("highlight_user_email");
 userDays = parseInt(localStorage.getItem("highlight_user_days"), 10) || 0;
-if (userEmail || Number(userDays) > 0) {
+if (userEmail && Number(userDays) > 0) {
   startFetchingWords();
 } else {
   createEmailInput();
