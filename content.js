@@ -1,5 +1,6 @@
 let currentWords = [];
 let userEmail = null;
+let userDays = 0;
 let intervalId = null;
 let isHighlighting = false; // Flag to prevent overlapping highlights
 
@@ -38,6 +39,17 @@ function createEmailInput() {
     border-radius: 4px;
   `;
 
+  const dayInput = document.createElement("input");
+  dayInput.type = "number";
+  dayInput.placeholder = "i.e. 15";
+  dayInput.style.cssText = `
+    padding: 8px;
+    width: 80px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  `;
+
   const button = document.createElement("button");
   button.textContent = "Start";
   button.style.cssText = `
@@ -51,9 +63,17 @@ function createEmailInput() {
 
   button.onclick = () => {
     const email = input.value.trim();
+    const days = parseInt(dayInput.value.trim(), 10);
+    if (isNaN(days) || days <= 0) {
+      alert("Please enter a valid number of days");
+      return;
+    }
+
     if (email.includes("@")) {
       userEmail = email;
+      userDays = days;
       localStorage.setItem("highlight_user_email", email);
+      localStorage.setItem("highlight_user_days", days);
       wrapper.remove();
       startFetchingWords();
     } else {
@@ -62,6 +82,7 @@ function createEmailInput() {
   };
 
   wrapper.appendChild(input);
+  wrapper.appendChild(dayInput);
   wrapper.appendChild(button);
   document.body.appendChild(wrapper);
 }
@@ -79,16 +100,16 @@ function startFetchingWords() {
 
 // 4. Safe fetching and highlighting
 async function fetchAndHighlight() {
-  if (!userEmail || isHighlighting) return;
+  if (!userEmail || isHighlighting || Number(userDays) <= 0) return;
 
   isHighlighting = true;
 
   try {
     const response = await chrome.runtime.sendMessage({
       action: "fetchData",
-      url: `http://45.15.160.247:5000/api/bids/get-companies?email=${encodeURIComponent(
+      url: `http://45.15.160.247:5000/api/bids/get-companies-by-days?email=${encodeURIComponent(
         userEmail
-      )}`,
+      )}&days=${encodeURIComponent(userDays)}`,
     });
 
     if (response?.data) {
@@ -177,7 +198,8 @@ function arraysEqual(a, b) {
 // Initialization
 
 userEmail = localStorage.getItem("highlight_user_email");
-if (userEmail) {
+userDays = parseInt(localStorage.getItem("highlight_user_days"), 10) || 0;
+if (userEmail || Number(userDays) > 0) {
   startFetchingWords();
 } else {
   createEmailInput();
