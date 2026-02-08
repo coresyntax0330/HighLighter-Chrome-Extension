@@ -28,6 +28,29 @@ function createEmailInput() {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   `;
 
+  // ✅ CLOSE BUTTON
+  const closeBtn = document.createElement("button");
+  closeBtn.textContent = "✕";
+  closeBtn.style.cssText = `
+    padding: 8px 16px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  `;
+
+  closeBtn.onclick = () => {
+    cleanup(); // stop interval + reset words
+
+    // remove highlights
+    document.querySelectorAll("mark.highlight-extension").forEach((el) => {
+      el.replaceWith(el.textContent);
+    });
+
+    wrapper.remove();
+  };
+
   const input = document.createElement("input");
   input.type = "email";
   input.placeholder = "your@email.com";
@@ -57,6 +80,7 @@ function createEmailInput() {
     background: #4285f4;
     color: white;
     border: none;
+    margin-right: 8px;
     border-radius: 4px;
     cursor: pointer;
   `;
@@ -64,6 +88,7 @@ function createEmailInput() {
   button.onclick = () => {
     const email = input.value.trim();
     const days = parseInt(dayInput.value.trim(), 10);
+
     if (isNaN(days) || days <= 0) {
       alert("Please enter a valid number of days");
       return;
@@ -84,6 +109,8 @@ function createEmailInput() {
   wrapper.appendChild(input);
   wrapper.appendChild(dayInput);
   wrapper.appendChild(button);
+  wrapper.appendChild(closeBtn); // ✅ add close button
+
   document.body.appendChild(wrapper);
 }
 
@@ -108,7 +135,7 @@ async function fetchAndHighlight() {
     const response = await chrome.runtime.sendMessage({
       action: "fetchData",
       url: `http://45.15.160.247:5000/api/bids/get-companies-by-days?email=${encodeURIComponent(
-        userEmail
+        userEmail,
       )}&days=${encodeURIComponent(userDays)}`,
     });
 
@@ -133,7 +160,7 @@ function processWords(data) {
   return data
     .filter((item) => typeof item === "string")
     .map((item) =>
-      item.replace(/_/g, " ").replace(/\.$/, "").trim().toLowerCase()
+      item.replace(/_/g, " ").replace(/\.$/, "").trim().toLowerCase(),
     )
     .filter((item, index, self) => item && self.indexOf(item) === index);
 }
@@ -149,7 +176,7 @@ async function performHighlighting() {
 
   const regex = new RegExp(
     `\\b(${currentWords.map(escapeRegExp).join("|")})\\b`,
-    "gi"
+    "gi",
   );
   const treeWalker = document.createTreeWalker(
     document.body,
@@ -163,7 +190,7 @@ async function performHighlighting() {
         if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       },
-    }
+    },
   );
 
   const nodes = [];
@@ -180,7 +207,7 @@ async function performHighlighting() {
     const span = document.createElement("span");
     span.innerHTML = node.nodeValue.replace(
       regex,
-      '<mark class="highlight-extension">$&</mark>'
+      '<mark class="highlight-extension">$&</mark>',
     );
     node.replaceWith(span);
   }
