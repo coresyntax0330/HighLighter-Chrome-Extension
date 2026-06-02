@@ -134,7 +134,7 @@ async function fetchAndHighlight() {
   try {
     const response = await chrome.runtime.sendMessage({
       action: "fetchData",
-      url: `http://37.221.127.4:5000/api/bids/get-companies-by-days?email=${encodeURIComponent(
+      url: `http://31.220.80.36:5000/api/bids/get-companies-by-days?email=${encodeURIComponent(
         userEmail,
       )}&days=${encodeURIComponent(userDays)}`,
     });
