@@ -33,98 +33,207 @@ function cleanup() {
 function createEmailInput() {
   if (document.getElementById(EMAIL_UI_ID)) return;
 
-  const wrapper = document.createElement("div");
-  wrapper.id = EMAIL_UI_ID;
-  wrapper.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: white;
-    border: 1px solid #ddd;
-    padding: 15px;
-    z-index: 99999;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  const host = document.createElement("div");
+  host.id = EMAIL_UI_ID;
+  const shadow = host.attachShadow({ mode: "open" });
+
+  shadow.innerHTML = `
+    <style>
+      :host {
+        all: initial;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 2147483647;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      .card {
+        width: 340px;
+        padding: 18px;
+        color: #0f172a;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 16px;
+        box-shadow:
+          0 18px 50px rgba(15, 23, 42, 0.16),
+          0 2px 6px rgba(15, 23, 42, 0.06);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        animation: hl-in 0.22s ease-out;
+      }
+      @keyframes hl-in {
+        from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+        to { opacity: 1; transform: none; }
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .logo {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+        box-shadow: 0 8px 16px rgba(249, 115, 22, 0.28);
+        display: grid;
+        place-items: center;
+      }
+      .logo svg { width: 18px; height: 18px; display: block; }
+      .title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+      .subtitle {
+        margin: 0 0 16px;
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.4;
+      }
+      .close {
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 8px;
+        background: #f1f5f9;
+        color: #64748b;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+      }
+      .close:hover { background: #fee2e2; color: #dc2626; }
+      form { display: grid; gap: 10px; }
+      label { display: grid; gap: 6px; font-size: 12px; font-weight: 600; color: #475569; }
+      input {
+        width: 100%;
+        height: 40px;
+        padding: 0 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        color: #0f172a;
+        font: 13px/1.4 inherit;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      }
+      input::placeholder { color: #94a3b8; }
+      input:hover { border-color: #cbd5e1; }
+      input:focus {
+        background: #fff;
+        border-color: #f97316;
+        box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.16);
+      }
+      input[type=number]::-webkit-outer-spin-button,
+      input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+      input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+      .error {
+        display: none;
+        margin: 0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: #fef2f2;
+        color: #b91c1c;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .error.show { display: block; }
+      .submit {
+        height: 42px;
+        margin-top: 4px;
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+        color: #fff;
+        font: 600 13px/1 inherit;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(249, 115, 22, 0.28);
+      }
+      .submit:hover { filter: brightness(1.05); transform: translateY(-1px); }
+      .submit:active { transform: none; filter: brightness(0.98); }
+    </style>
+    <div class="card">
+      <div class="header">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M9 16.2 16.3 7.6a1.15 1.15 0 0 1 1.7 0l1.4 1.5a1.15 1.15 0 0 1 0 1.6L12.1 19.4H9v-3.2Z" fill="#fff"/>
+              <path d="M9 20.4h7.2" stroke="#facc15" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="title">Auto Highlighter</div>
+        </div>
+        <button class="close" type="button" aria-label="Close">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <p class="subtitle">Highlight matching companies on this page</p>
+      <form>
+        <label>
+          Email
+          <input class="email" type="email" placeholder="you@company.com" autocomplete="email" />
+        </label>
+        <label>
+          Days to look back
+          <input class="days" type="number" min="1" step="1" placeholder="15" />
+        </label>
+        <p class="error"></p>
+        <button class="submit" type="submit">Start highlighting</button>
+      </form>
+    </div>
   `;
 
-  const closeBtn = document.createElement("button");
-  closeBtn.textContent = "✕";
-  closeBtn.style.cssText = `
-    padding: 8px 16px;
-    background: red;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  `;
+  const form = shadow.querySelector("form");
+  const emailInput = shadow.querySelector(".email");
+  const dayInput = shadow.querySelector(".days");
+  const errorEl = shadow.querySelector(".error");
+  const savedEmail = localStorage.getItem("highlight_user_email");
+  const savedDays = localStorage.getItem("highlight_user_days");
+  if (savedEmail) emailInput.value = savedEmail;
+  if (savedDays) dayInput.value = savedDays;
 
-  closeBtn.onclick = () => {
-    cleanup();
-    removeHighlights();
-    wrapper.remove();
+  const showError = (message) => {
+    errorEl.textContent = message;
+    errorEl.classList.add("show");
   };
 
-  const input = document.createElement("input");
-  input.type = "email";
-  input.placeholder = "your@email.com";
-  input.style.cssText = `
-    padding: 8px;
-    width: 200px;
-    margin-right: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  `;
+  shadow.querySelector(".close").onclick = () => {
+    cleanup();
+    removeHighlights();
+    host.remove();
+  };
 
-  const dayInput = document.createElement("input");
-  dayInput.type = "number";
-  dayInput.placeholder = "i.e. 15";
-  dayInput.style.cssText = `
-    padding: 8px;
-    width: 80px;
-    margin-right: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  `;
+  form.onsubmit = (event) => {
+    event.preventDefault();
+    errorEl.classList.remove("show");
 
-  const button = document.createElement("button");
-  button.textContent = "Start";
-  button.style.cssText = `
-    padding: 8px 16px;
-    background: #4285f4;
-    color: white;
-    border: none;
-    margin-right: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-  `;
-
-  button.onclick = () => {
-    const email = input.value.trim();
+    const email = emailInput.value.trim();
     const days = parseInt(dayInput.value.trim(), 10);
 
+    if (!/.+@.+\..+/.test(email)) {
+      showError("Enter a valid email address.");
+      emailInput.focus();
+      return;
+    }
     if (isNaN(days) || days <= 0) {
-      alert("Please enter a valid number of days");
+      showError("Enter a valid number of days.");
+      dayInput.focus();
       return;
     }
 
-    if (email.includes("@")) {
-      userEmail = email;
-      userDays = days;
-      localStorage.setItem("highlight_user_email", email);
-      localStorage.setItem("highlight_user_days", days);
-      wrapper.remove();
-      startFetchingWords();
-    } else {
-      alert("Please enter a valid email");
-    }
+    userEmail = email;
+    userDays = days;
+    localStorage.setItem("highlight_user_email", email);
+    localStorage.setItem("highlight_user_days", String(days));
+    host.remove();
+    startFetchingWords();
   };
 
-  wrapper.appendChild(input);
-  wrapper.appendChild(dayInput);
-  wrapper.appendChild(button);
-  wrapper.appendChild(closeBtn);
-
-  document.body.appendChild(wrapper);
+  document.documentElement.appendChild(host);
 }
 
 function startFetchingWords() {
