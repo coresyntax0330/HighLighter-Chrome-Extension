@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Automatically highlights certain words on a page",
   "permissions": ["scripting", "storage"],
-  "host_permissions": ["<all_urls>", "http://31.220.80.36:5000/*"],
+  "host_permissions": ["<all_urls>", "https://api.lovapextech.com/*"],
   "background": {
     "service_worker": "background.js"
   },
